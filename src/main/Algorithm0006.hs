@@ -80,6 +80,7 @@ getCost
 	-> Int
 getCost length ant
     | v == 0 = 0
-	| v < 0 = position ant
-	| v > 0 = length - (position ant)
+	| v < 0 = p / (negate v) + 1
+	| v > 0 = (length - p) / v + 1
 	where v = velocity ant
+	      p = position ant
