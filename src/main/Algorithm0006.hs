@@ -45,10 +45,14 @@ data Ant = Ant {
 } deriving (Eq, Show)
 
 {-
-- 蟻が進むスピードと方向の定義(暫定は2価しか持たない)
+- 蟻さんが進むスピードと方向の定義(暫定は2価しか持たない)
 -}
 data Velocity = West -1 | East 1
 
+{-
+ - 蟻さん達の状況をトレースするためのコンテキスト
+ - 実質的にはただの蟻さんコレクション
+ -}
 type AntContext = [Ant]
 
 {-
@@ -61,6 +65,54 @@ listCost
 	-> [(Int, AntContext)]
 listCost _ [] = []
 listCost length ctx:restCtxs = ((getMaxCost length ctx), ctx) : listCost length restCtxs
+
+
+{- |
+ - 蟻さんをそれぞれ一歩分移動させます。
+ -
+ - 一歩移動した後の位置は以下のように計算されます。
+ -
+ - position + velocity
+ -
+ - この関数では上記の計算を全ての愛rさんに適用します。
+ -}
+step :: AntContext -> AntContext
+step ctx = map (\ ant -> Ant {position=(position ant) + (velocity ant), velocity=(velocity ant)}) ctx
+
+{- |
+ - 条件に該当する蟻さんの進行方向を逆転させます。
+ - 進行方向の逆転は蟻さんの持つvelocity値の符号を反転させることで表現します。
+ -
+ - 進行方向反転の条件は蟻さんの「衝突」です。
+ -
+ - 衝突の条件
+ - 同一positionの蟻さんがいる場合
+ - positionの差が1で、少ない方のvelocityが正かつ大きい方のvelocityが負の場合
+ -
+ -}
+turn :: AntContext -> AntContext
+
+{-
+ - 二匹の蟻さんが衝突しているかを判定します。
+ -
+ - 衝突の条件
+ - 同一positionの蟻さんがいる場合
+ - positionの差が1で、少ない方のvelocityが正かつ大きい方のvelocityが負の場合
+ -}
+isConflict :: Ant a => a -> a -> Bool
+isConflict lhs rhs
+    | interval == 1 && (velocity lhs) < 0 && (velocity rhs) > 0 = True
+    | interval == -1 && (velocity lhs) > 0 && (velocity rhs) < 0 = True
+	| otherwise = isSamePosition lhs rhs
+    where interval = (position lhs) - (position rhs)
+
+{-
+ - 蟻さんの位置比較簡略化のための関数
+ - 二匹の蟻さんが現在同じ位置で衝突中かを判定します。
+ -}
+isSamePosition :: Ant a => a -> a -> Bool
+isSamePosition lhs rhs = (position lhs) == (position rhs)
+
 
 {-
 - 蟻さんの各配置から全ての蟻さんが経路を渡りきるステップ数を返却します
