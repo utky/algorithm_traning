@@ -32,107 +32,100 @@
 - 従って、総体としての移動コストは変わらない。
 -
 - このことから、与えられた蟻の情報を収集し、
-- 落下する方向の端に最も遠い蟻の移動距離が、
-- 全体としての落下時間になる。
+- 落下する方向の端に最も遠い蟻の移動時間が、
+- 全ての蟻が棒を渡りきるのに必要な経過時間になる。
 -}
-
+import System.Environment
 {-
 - 蟻さんを表す構造体
 -}
 data Ant = Ant {
     position :: Int, -- ^ 現在位置(経路の左端から数える)
-    velocity :: Velocity  -- ^ 1秒あたりで進む移動距離(正 東向き : 負 西向き)
-} deriving (Eq, Show)
+    velocity :: Int  -- ^ 1秒あたりで進む移動距離(正 東向き : 負 西向き)
+} deriving (Show)
 
 {-
 - 蟻さんが進むスピードと方向の定義(暫定は2価しか持たない)
 -}
-data Velocity = West -1 | East 1
+-- data Velocity = West -1 | East 1 deriving Int
 
 {-
  - 蟻さん達の状況をトレースするためのコンテキスト
  - 実質的にはただの蟻さんコレクション
  -}
 type AntContext = [Ant]
+{-
+main = do
+    args <- getArgs
+    if length args < 3
+    then
+        putStrLn "Usage: cmd length antCount antPositions..."
+    else do
+        let length = read (head args) :: Int
+        let antCount = read (head . head args) :: Int
+        let antPositions = map (\ str -> read str :: Int) $ tail $ tail args
+		let resultMap = listCosts length $ combinations [1,-1] antPositions
+		let maxCost = maximum . map (fst) resultMap
+		let minCost = minimum . map (fst) resultMap
+        putStrLn . show [maxCost, minCost]
+-}
 
 {-
 - 指定された蟻さんの配置パターンリスト数分だけ、
 - それぞれにかかる移動終了のステップ数を計算します。
+-
+- 返却されるリストの要素は以下の構造を持ちます。
+-
+- (この蟻さん定義情報でかかるステップ数, 蟻さんの定義情報リスト)
 -}
-listCost
-    :: Int
-	-> [AntContext]
-	-> [(Int, AntContext)]
-listCost _ [] = []
-listCost length ctx:restCtxs = ((getMaxCost length ctx), ctx) : listCost length restCtxs
+listCosts
+    :: Int -- ^ 棒の長さ
+	-> [AntContext] -- 蟻さんの定義情報リスト
+	-> [(Int, AntContext)] -- ^ 各定義情報とその定義に基づいて経過した時間のマップ
+listCosts _ [] = []
+listCosts length (ctx:restCtxs) = ((getTotalCost length ctx), ctx) : listCosts length restCtxs
+
+combinations
+    :: [Int] -- ^ 蟻さんが取りうる進行方向と速度のパターンリスト
+	-> [Int] -- ^ 各蟻さんの位置リスト
+	-> [[Ant]] -- ^ 蟻さんの初期配置のパターンリスト
+combinations [] _ = [[]]
+combinations _ [] = []
+combinations (cvel:velList) allPos@(cpos:posList) = map (Ant {position=cpos,velocity=cvel}:) (combinations velList posList)  ++ combinations velList allPos
+
+comb _ 0 = [[]]
+comb [] _ = []
+comb y@(x:xs) l = map (x:) (comb y (l-1))  ++ (comb xs l)
 
 
 {- |
- - 蟻さんをそれぞれ一歩分移動させます。
- -
- - 一歩移動した後の位置は以下のように計算されます。
- -
- - position + velocity
- -
- - この関数では上記の計算を全ての愛rさんに適用します。
- -}
-step :: AntContext -> AntContext
-step ctx = map (\ ant -> Ant {position=(position ant) + (velocity ant), velocity=(velocity ant)}) ctx
+- 蟻さんの各配置から全ての蟻さんが経路を渡りきるステップ数を返却します。
+-
+- 各蟻さんが経路を渡りきるまでにかかるステップ数のうち、
+- 最大の値が全ての蟻さんが落下するまでの時間となります。
+-}
+getTotalCost 
+    :: Int -- ^ 棒の長さ
+	-> AntContext -- ^ 各蟻さんの定義情報
+	-> Int -- ^ 全ての蟻さんが棒を渡り切るのにかかるステップ数
+getTotalCost length ctx = maximum $ map (getCost length) ctx
 
 {- |
- - 条件に該当する蟻さんの進行方向を逆転させます。
- - 進行方向の逆転は蟻さんの持つvelocity値の符号を反転させることで表現します。
- -
- - 進行方向反転の条件は蟻さんの「衝突」です。
- -
- - 衝突の条件
- - 同一positionの蟻さんがいる場合
- - positionの差が1で、少ない方のvelocityが正かつ大きい方のvelocityが負の場合
- -
- -}
-turn :: AntContext -> AntContext
-
-{-
- - 二匹の蟻さんが衝突しているかを判定します。
- -
- - 衝突の条件
- - 同一positionの蟻さんがいる場合
- - positionの差が1で、少ない方のvelocityが正かつ大きい方のvelocityが負の場合
- -}
-isConflict :: Ant a => a -> a -> Bool
-isConflict lhs rhs
-    | interval == 1 && (velocity lhs) < 0 && (velocity rhs) > 0 = True
-    | interval == -1 && (velocity lhs) > 0 && (velocity rhs) < 0 = True
-	| otherwise = isSamePosition lhs rhs
-    where interval = (position lhs) - (position rhs)
-
-{-
- - 蟻さんの位置比較簡略化のための関数
- - 二匹の蟻さんが現在同じ位置で衝突中かを判定します。
- -}
-isSamePosition :: Ant a => a -> a -> Bool
-isSamePosition lhs rhs = (position lhs) == (position rhs)
-
-
-{-
-- 蟻さんの各配置から全ての蟻さんが経路を渡りきるステップ数を返却します
--}
-getMaxCost 
-    :: Int
-	-> AntContext
-	-> Int
-getMaxCost length ctx = max $ map (getCost length) ctx
-
-{-
-- 蟻さん一匹が経路を渡りきるステップ数を返却します
+- 蟻さん一匹が経路を渡りきるステップ数を返却します。
+-
+- * 蟻さんが西向きの場合
+-   現在の位置[西端からの距離] ÷ 移動速度 = かかるステップ数(時間)
+-
+- * 蟻さんが東向きの場合
+-   (棒の長さ - 現在の位置)[東端までの距離] ÷ 移動速度 = かかるステップ数(時間)
 -}
 getCost
-    :: Int
-	-> Ant
-	-> Int
+    :: Int -- ^ 棒の長さ
+	-> Ant -- ^ 蟻さん情報
+	-> Int -- ^ 現在位置から棒を渡りきるまでのステップ数
 getCost length ant
     | v == 0 = 0
-	| v < 0 = p / (negate v) + 1
-	| v > 0 = (length - p) / v + 1
+	| v < 0 = p `div` (negate v)
+	| v > 0 = ((length - 1) - p) `div` v
 	where v = velocity ant
 	      p = position ant
