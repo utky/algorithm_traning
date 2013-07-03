@@ -36,6 +36,7 @@
 - 全ての蟻が棒を渡りきるのに必要な経過時間になる。
 -}
 import System.Environment
+
 {-
 - 蟻さんを表す構造体
 -}
@@ -45,70 +46,38 @@ data Ant = Ant {
 } deriving (Show)
 
 {-
-- 蟻さんが進むスピードと方向の定義(暫定は2価しか持たない)
--}
--- data Velocity = West -1 | East 1 deriving Int
-
-{-
  - 蟻さん達の状況をトレースするためのコンテキスト
  - 実質的にはただの蟻さんコレクション
  -}
 type AntContext = [Ant]
-{-
-main = do
-    args <- getArgs
-    if length args < 3
-    then
-        putStrLn "Usage: cmd length antCount antPositions..."
-    else do
-        let length = read (head args) :: Int
-        let antCount = read (head . head args) :: Int
-        let antPositions = map (\ str -> read str :: Int) $ tail $ tail args
-		let resultMap = listCosts length $ combinations [1,-1] antPositions
-		let maxCost = maximum . map (fst) resultMap
-		let minCost = minimum . map (fst) resultMap
-        putStrLn . show [maxCost, minCost]
--}
+
+main = do args <- getArgs
+          let maxAndMin = getMaxAndMin args
+          putStrLn $ "最長時間=" ++ show (fst maxAndMin) ++ ", 最短時間=" ++ show (snd maxAndMin) 
+
+getMaxAndMin :: [String] -> (Int, Int)
+getMaxAndMin (lengthStr:antCount:positionsStr) = (maximum costs, minimum costs)
+    where len = read lengthStr :: Int
+          positions = map (\ str -> read str :: Int) positionsStr
+          costs = listCosts len $ createAntContext positions 
 
 {-
-- 指定された蟻さんの配置パターンリスト数分だけ、
-- それぞれにかかる移動終了のステップ数を計算します。
+- 指定された蟻さんの配置定義リスト数分だけ、
+- それぞれにかかる移動終了のステップ数(時間)を計算します。
 -
-- 返却されるリストの要素は以下の構造を持ちます。
+- 返却されるリストの要素は各蟻さんが棒を渡り切るステップ数です。
 -
-- (この蟻さん定義情報でかかるステップ数, 蟻さんの定義情報リスト)
 -}
 listCosts
     :: Int -- ^ 棒の長さ
-	-> [AntContext] -- 蟻さんの定義情報リスト
-	-> [(Int, AntContext)] -- ^ 各定義情報とその定義に基づいて経過した時間のマップ
+    -> AntContext -- 蟻さんの定義情報リスト
+    -> [Int] -- ^ 各蟻さんの定義が経路を渡りきるのに必要なステップ数のリスト
 listCosts _ [] = []
-listCosts length (ctx:restCtxs) = ((getTotalCost length ctx), ctx) : listCosts length restCtxs
+listCosts length ctx = map (getCost length) ctx
 
-combinations
-    :: [Int] -- ^ 蟻さんが取りうる進行方向と速度のパターンリスト
-	-> [Int] -- ^ 各蟻さんの位置リスト
-	-> [[Ant]] -- ^ 蟻さんの初期配置のパターンリスト
-combinations [] _ = [[]]
-combinations _ [] = []
-combinations (cvel:velList) allPos@(cpos:posList) = map (Ant {position=cpos,velocity=cvel}:) (combinations velList posList)  ++ combinations velList allPos
-
-comb _ 0 = [[]]
-comb [] _ = []
-comb y@(x:xs) l = map (x:) (comb y (l-1))  ++ (comb xs l)
-
-
-{- |
-- 蟻さんの各配置から全ての蟻さんが経路を渡りきるステップ数を返却します。
--
-- 各蟻さんが経路を渡りきるまでにかかるステップ数のうち、
-- 最大の値が全ての蟻さんが落下するまでの時間となります。
--}
-getTotalCost 
-    :: Int -- ^ 棒の長さ
-	-> AntContext -- ^ 各蟻さんの定義情報
-	-> Int -- ^ 全ての蟻さんが棒を渡り切るのにかかるステップ数
-getTotalCost length ctx = maximum $ map (getCost length) ctx
+createAntContext :: [Int] -> AntContext
+createAntContext positions = map (\ (pos, vel) -> Ant { position = pos, velocity = vel}) antPatterns
+    where antPatterns = zip positions [1,1..] ++ zip positions [(-1),(-1)..]
 
 {- |
 - 蟻さん一匹が経路を渡りきるステップ数を返却します。
@@ -121,11 +90,11 @@ getTotalCost length ctx = maximum $ map (getCost length) ctx
 -}
 getCost
     :: Int -- ^ 棒の長さ
-	-> Ant -- ^ 蟻さん情報
-	-> Int -- ^ 現在位置から棒を渡りきるまでのステップ数
+    -> Ant -- ^ 蟻さん情報
+    -> Int -- ^ 現在位置から棒を渡りきるまでのステップ数
 getCost length ant
     | v == 0 = 0
-	| v < 0 = p `div` (negate v)
-	| v > 0 = ((length - 1) - p) `div` v
-	where v = velocity ant
-	      p = position ant
+    | v < 0 = p `div` (negate v)
+    | v > 0 = ((length - 1) - p) `div` v
+    where v = velocity ant
+          p = position ant
