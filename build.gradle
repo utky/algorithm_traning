@@ -1,0 +1,13 @@
+defaultTasks 'comile'
+
+srcDir = 'src/main'
+testDir = 'src/test'
+outputDir ='build/main'
+
+sources = '**/*.hs'
+
+task clean << {
+}
+
+task compile << {
+}
