@@ -2,9 +2,11 @@ import System.Environment
 
 main = do args <- getArgs
           let count = read (head args) :: Integer
-          putStrLn $ show $ okometsubu count 
+          putStrLn $ show $ fibonacci count 
 
-okometsubu :: Integer -> Integer
-okometsubu 0 = 0
-okometsubu 1 = 1
-okometsubu n = okometsubu (n - 1) + okometsubu (n - 2)
+fibonacci :: Integer -> Integer
+fibonacci 0 = 0
+fibonacci 1 = 1
+fibonacci n = fibonacci (n - 1) + fibonacci (n - 2)
+
+pucci :: Integer -> Integer
