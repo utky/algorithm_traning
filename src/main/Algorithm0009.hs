@@ -1,7 +1,7 @@
 import System.Environment
 
 main = do args <- getArgs
-          let count = head args -- この要素数の引数要らない気がする
+          let count = head args
           let list = head $ tail args
           putStrLn $ show $ sortCow list
 {- |
@@ -14,31 +14,30 @@ sortCow
     :: [Char]
     -> [Char]
 sortCow [] = []
-sortCow list =
-    let (ahead, nextList) = popElement list
-    in  ahead ++  sortCow nextList
+sortCow list 
+    | needsLast == True = (last list) : sortCow (init list)
+    | needsLast == False = (head list) : sortCow (tail list)
+    where needsLast = isHeadLarger list
 
 {- |
  - 指定されたリストの先頭と末尾の要素を比較し、
- - より小さい方の要素をリストから切り出します。
+ - 先頭要素が大きいかどうかを判定します。
  -
- - * 切り出しのルールは以下の通り。
- - 1. 先頭 ＜ 末尾 : 先頭を切り出す
- - 2. 先頭 ＞ 末尾 : 末尾を切り出す
- - 3. 先頭 ＝ 末尾 : 先頭も末尾も切り出す
- - 
- - * 返却値のタプルの定義は以下の通り。
- - 一番目の要素: 切り出された要素リスト(複数要素入る可能性がある)
- - 二番目の要素: 切り出された残りの要素が入ったリスト
+ - * 判定のルールは以下の通り。
+ - 1. 先頭 ＜ 末尾 : False
+ - 2. 先頭 ＞ 末尾 : True
+ - 3. 先頭 ＝ 末尾 : 先頭と末尾を除いたリストを再帰的に判定する
  -}
-popElement
+isHeadLarger
     :: [Char]
-    -> ([Char], [Char])
-popElement [] = ([], [])
-popElement (lst:[]) = (lst:[], [])
-popElement list 
-    | headElm < lastElm = (headElm:[], tail list)
-    | headElm > lastElm = (lastElm:[], init list)
-    | otherwise = (headElm:lastElm:[], init $ tail list)
+    -> Bool
+isHeadLarger [] = False
+isHeadLarger (end:[]) = False
+isHeadLarger list 
+    | headElm < lastElm = False
+    | headElm > lastElm = True
+    | otherwise = isHeadLarger (init $ tail list)
     where headElm = head list
           lastElm = last list
+
+
